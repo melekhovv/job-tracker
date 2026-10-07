@@ -1,6 +1,0 @@
-
-The command exited with code 0.
-Output:
-Status: 403
-{"errors":[{"type":"forbidden"}],"request_id":"17895688548315bfa3151a424466b001"}
-

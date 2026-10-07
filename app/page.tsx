@@ -6,17 +6,21 @@ import {
   Send, 
   CheckCircle2, 
   XCircle, 
-  AlertTriangle, 
+  AlertCircle, 
   Plus, 
   Download, 
   Search, 
   ArrowUp,
   MapPin,
-  Globe,
   Mail,
+  Briefcase,
+  FileSpreadsheet,
+  Globe2,
+  Clock,
   ExternalLink,
-  MessageSquare
+  ChevronRight
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Company {
   id: number;
@@ -104,13 +108,12 @@ export default function JobTracker() {
   const [newContact, setNewContact] = useState('');
   const [newNote, setNewNote] = useState('');
 
-  // Загрузка состояния из localStorage
   useEffect(() => {
-    const savedStates = localStorage.getItem('next_job_tracker_states');
+    const savedStates = localStorage.getItem('shadcn_job_tracker_states');
     if (savedStates) {
       try { setStates(JSON.parse(savedStates)); } catch (e) {}
     }
-    const savedCustom = localStorage.getItem('next_job_tracker_custom');
+    const savedCustom = localStorage.getItem('shadcn_job_tracker_custom');
     if (savedCustom) {
       try {
         const parsed = JSON.parse(savedCustom);
@@ -127,7 +130,7 @@ export default function JobTracker() {
 
   const saveStates = (newStates: Record<number, CompanyState>) => {
     setStates(newStates);
-    localStorage.setItem('next_job_tracker_states', JSON.stringify(newStates));
+    localStorage.setItem('shadcn_job_tracker_states', JSON.stringify(newStates));
   };
 
   const toggleSent = (id: number, sent: boolean) => {
@@ -167,11 +170,9 @@ export default function JobTracker() {
     const updated = [...companies, newComp];
     setCompanies(updated);
     
-    // Сохранение кастомных
     const customOnly = updated.filter(c => c.isCustom);
-    localStorage.setItem('next_job_tracker_custom', JSON.stringify(customOnly));
+    localStorage.setItem('shadcn_job_tracker_custom', JSON.stringify(customOnly));
 
-    // Статус отправлено
     saveStates({
       ...states,
       [newId]: { sent: true, status: 'none', channel: newChannel, note: newNote.trim() }
@@ -204,11 +205,10 @@ export default function JobTracker() {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "трекер_компаний_nextjs.csv";
+    a.download = "companies_tracker_shadcn.csv";
     a.click();
   };
 
-  // Фильтрация
   const filtered = companies.filter(item => {
     const s = states[item.id] || { sent: false, status: 'none', channel: 'email', note: '' };
     if (filter === 'sakhalin' && !item.isSakhalin) return false;
@@ -229,295 +229,341 @@ export default function JobTracker() {
     return true;
   });
 
-  // Статистика
   const countSent = Object.values(states).filter(s => s.sent).length;
   const countYes = Object.values(states).filter(s => s.status === 'yes').length;
   const countNo = Object.values(states).filter(s => s.status === 'no').length;
   const countNoEmail = Object.values(states).filter(s => s.status === 'noemail').length;
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      {/* Липкая верхняя шапка */}
-      <header className="sticky top-0 z-50 bg-slate-900/90 backdrop-blur-md py-4 border-b border-slate-700/80 mb-6 flex flex-wrap justify-between items-center gap-4">
-        <div>
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Липкая верхняя навигация shadcn */}
+      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="max-w-[1500px] mx-auto flex h-16 items-center justify-between px-4 sm:px-8">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-              <span className="p-2 bg-blue-600/20 text-blue-400 rounded-lg">🚀</span>
-              Трекер откликов: Работа и Практика
-            </h1>
-            <span className="text-xs px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full font-medium">
-              Next.js + Tailwind
-            </span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-semibold">
+              <Briefcase className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base sm:text-lg font-semibold tracking-tight">Career & Practice Tracker</h1>
+                <span className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-muted-foreground bg-muted/50">
+                  ui.shadcn.com
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground hidden sm:block">
+                Андрей Мелехов | Сетевое и системное администрирование (СПЭТ)
+              </p>
+            </div>
           </div>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Кандидат: <strong className="text-slate-200">Андрей Мелехов</strong> | Специальность: Сетевое и системное администрирование (СПЭТ)
-          </p>
-        </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2.5 rounded-lg text-sm flex items-center gap-2 shadow-lg shadow-indigo-600/20 transition-all cursor-pointer"
-        >
-          <Plus size={16} /> Добавить компанию
-        </button>
-      </header>
-
-      {/* Карточки статистики */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-        <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
-          <span className="text-2xl sm:text-3xl font-bold text-blue-400 block">{companies.length}</span>
-          <span className="text-xs text-slate-400 uppercase tracking-wider font-medium">Всего компаний</span>
-        </div>
-        <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
-          <span className="text-2xl sm:text-3xl font-bold text-sky-400 block">{countSent}</span>
-          <span className="text-xs text-slate-400 uppercase tracking-wider font-medium">Отправлено</span>
-        </div>
-        <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
-          <span className="text-2xl sm:text-3xl font-bold text-emerald-400 block">{countYes}</span>
-          <span className="text-xs text-slate-400 uppercase tracking-wider font-medium">Ответили (✅)</span>
-        </div>
-        <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
-          <span className="text-2xl sm:text-3xl font-bold text-rose-400 block">{countNo}</span>
-          <span className="text-xs text-slate-400 uppercase tracking-wider font-medium">Отказы (❌)</span>
-        </div>
-        <div className="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl col-span-2 sm:col-span-1">
-          <span className="text-2xl sm:text-3xl font-bold text-amber-400 block">{countNoEmail}</span>
-          <span className="text-xs text-slate-400 uppercase tracking-wider font-medium">Нет почты (⚠️)</span>
-        </div>
-      </div>
-
-      {/* Фильтры и поиск */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <div className="relative flex-1 min-w-[260px]">
-          <Search className="absolute left-3.5 top-3 text-slate-400" size={16} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="🔍 Поиск по названию, почте, заметке..."
-            className="w-full bg-slate-800/80 border border-slate-700 text-white pl-10 pr-4 py-2 rounded-lg text-sm focus:outline-none focus:border-blue-500 transition-colors"
-          />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {(['all', 'sakhalin', 'remote', 'custom', 'sent', 'error'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setFilter(tab)}
-              className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                filter === tab 
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30' 
-                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 border border-slate-700'
-              }`}
-            >
-              {tab === 'all' && 'Все'}
-              {tab === 'sakhalin' && '📍 Сахалин'}
-              {tab === 'remote' && '🌐 Удалёнка'}
-              {tab === 'custom' && '⭐ Мои'}
-              {tab === 'sent' && '☑️ Отправленные'}
-              {tab === 'error' && '⚠️ Ошибки'}
-            </button>
-          ))}
           <button
-            onClick={exportCSV}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ml-auto"
+            onClick={() => setModalOpen(true)}
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 gap-2 cursor-pointer"
           >
-            <Download size={14} /> Экспорт CSV
+            <Plus className="h-4 w-4" /> Добавить компанию
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Таблица */}
-      <div className="bg-slate-800/40 border border-slate-700 rounded-xl overflow-hidden shadow-xl">
-        <div className="overflow-x-auto max-h-[72vh] overflow-y-auto">
-          <table className="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr className="bg-slate-800 sticky top-0 z-20 shadow-md">
-                <th className="py-3 px-3 text-slate-400 font-semibold text-xs uppercase w-10">№</th>
-                <th className="py-3 px-3 text-slate-400 font-semibold text-xs uppercase text-center w-20">Отправлено</th>
-                <th className="py-3 px-3 text-slate-400 font-semibold text-xs uppercase w-44">Ответ компании</th>
-                <th className="py-3 px-3 text-slate-400 font-semibold text-xs uppercase w-52">Способ / Заметка</th>
-                <th className="py-3 px-4 text-slate-400 font-semibold text-xs uppercase">Компания</th>
-                <th className="py-3 px-3 text-slate-400 font-semibold text-xs uppercase">Регион</th>
-                <th className="py-3 px-4 text-slate-400 font-semibold text-xs uppercase">Контакты</th>
-                <th className="py-3 px-4 text-slate-400 font-semibold text-xs uppercase">Сфера и позиция</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700/50">
-              {filtered.map(item => {
-                const s = states[item.id] || { sent: false, status: 'none', channel: 'email', note: '' };
+      <main className="max-w-[1500px] mx-auto px-4 sm:px-8 py-6 space-y-6">
+        {/* Карточки статистики shadcn Card */}
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+          <div className="rounded-xl border bg-card text-card-foreground shadow">
+            <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="tracking-tight text-xs font-medium text-muted-foreground uppercase">Всего в базе</h3>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="p-6 pt-0">
+              <div className="text-2xl font-bold">{companies.length}</div>
+              <p className="text-xs text-muted-foreground mt-1">Организаций</p>
+            </div>
+          </div>
 
-                // Окраска строк
-                let rowBg = 'hover:bg-slate-800/30';
-                if (s.status === 'yes') rowBg = 'bg-emerald-950/40 border-l-4 border-l-emerald-500';
-                else if (s.status === 'no') rowBg = 'bg-rose-950/40 border-l-4 border-l-rose-500';
-                else if (s.status === 'noemail') rowBg = 'bg-amber-950/40 border-l-4 border-l-amber-500';
-                else if (s.sent) rowBg = 'bg-blue-950/20';
+          <div className="rounded-xl border bg-card text-card-foreground shadow">
+            <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="tracking-tight text-xs font-medium text-muted-foreground uppercase">Отправлено</h3>
+              <Send className="h-4 w-4 text-sky-400" />
+            </div>
+            <div className="p-6 pt-0">
+              <div className="text-2xl font-bold text-sky-400">{countSent}</div>
+              <p className="text-xs text-muted-foreground mt-1">Резюме и писем</p>
+            </div>
+          </div>
 
-                return (
-                  <tr key={item.id} className={`transition-colors ${rowBg}`}>
-                    <td className="py-3 px-3 text-slate-500 font-mono text-xs">{item.id}</td>
-                    <td className="py-3 px-3 text-center">
-                      <input
-                        type="checkbox"
-                        checked={s.sent}
-                        onChange={(e) => toggleSent(item.id, e.target.checked)}
-                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 bg-slate-900 border-slate-700 cursor-pointer"
-                      />
-                    </td>
-                    <td className="py-3 px-3">
-                      <select
-                        value={s.status}
-                        onChange={(e) => updateStatus(item.id, e.target.value as any)}
-                        className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border focus:outline-none cursor-pointer w-full ${
-                          s.status === 'yes'
-                            ? 'bg-emerald-900/60 text-emerald-300 border-emerald-500'
-                            : s.status === 'no'
-                            ? 'bg-rose-900/60 text-rose-300 border-rose-500'
-                            : s.status === 'noemail'
-                            ? 'bg-amber-900/60 text-amber-300 border-amber-500'
-                            : 'bg-slate-900 text-slate-300 border-slate-700'
-                        }`}
-                      >
-                        <option value="none">⏳ Ждем ответ</option>
-                        <option value="yes">✅ Да (Ответили)</option>
-                        <option value="no">❌ Нет (Отказ)</option>
-                        <option value="noemail">⚠️ Нет такой почты</option>
-                      </select>
-                    </td>
-                    <td className="py-3 px-3 space-y-1.5">
-                      <select
-                        value={s.channel}
-                        onChange={(e) => updateChannel(item.id, e.target.value as any)}
-                        className="text-xs bg-slate-900 text-slate-400 border border-slate-700 rounded px-2 py-1 w-full focus:outline-none"
-                      >
-                        <option value="email">📧 Через Email</option>
-                        <option value="site">🌐 Через Сайт</option>
-                        <option value="hh">💼 Через hh.ru</option>
-                        <option value="tg">✈️ В Telegram</option>
-                      </select>
-                      <input
-                        type="text"
-                        value={s.note}
-                        onChange={(e) => updateNote(item.id, e.target.value)}
-                        placeholder="Заметка..."
-                        className="text-xs bg-slate-900 text-slate-200 border border-slate-700 rounded px-2 py-1 w-full focus:outline-none focus:border-blue-500"
-                      />
-                    </td>
-                    <td className="py-3 px-4 font-medium text-white">
-                      {item.name}
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
-                        item.isCustom
-                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                          : item.isSakhalin
-                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-                          : 'bg-purple-500/10 text-purple-400 border-purple-500/30'
-                      }`}>
-                        {item.region}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <code className="text-xs bg-slate-900 text-sky-400 px-2 py-1 rounded border border-slate-800 font-mono select-all">
-                        {item.email || '—'}
-                      </code>
-                    </td>
-                    <td className="py-3 px-4 text-xs text-slate-400">
-                      {item.role}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="rounded-xl border bg-card text-card-foreground shadow">
+            <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="tracking-tight text-xs font-medium text-muted-foreground uppercase">Одобрено / Ответ</h3>
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+            </div>
+            <div className="p-6 pt-0">
+              <div className="text-2xl font-bold text-emerald-400">{countYes}</div>
+              <p className="text-xs text-muted-foreground mt-1">Положительных откликов</p>
+            </div>
+          </div>
+
+          <div className="rounded-xl border bg-card text-card-foreground shadow">
+            <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="tracking-tight text-xs font-medium text-muted-foreground uppercase">Отказы</h3>
+              <XCircle className="h-4 w-4 text-rose-400" />
+            </div>
+            <div className="p-6 pt-0">
+              <div className="text-2xl font-bold text-rose-400">{countNo}</div>
+              <p className="text-xs text-muted-foreground mt-1">Компаний отказали</p>
+            </div>
+          </div>
+
+          <div className="rounded-xl border bg-card text-card-foreground shadow col-span-2 sm:col-span-1">
+            <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="tracking-tight text-xs font-medium text-muted-foreground uppercase">Ошибки почты</h3>
+              <AlertCircle className="h-4 w-4 text-amber-400" />
+            </div>
+            <div className="p-6 pt-0">
+              <div className="text-2xl font-bold text-amber-400">{countNoEmail}</div>
+              <p className="text-xs text-muted-foreground mt-1">Не существует ящика</p>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Кнопка наверх */}
+        {/* Панель фильтров и поиска */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Поиск компании, почты или заметки..."
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 pl-9 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            {(['all', 'sakhalin', 'remote', 'custom', 'sent', 'error'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setFilter(tab)}
+                className={cn(
+                  "inline-flex items-center justify-center rounded-md px-3 py-1 text-xs font-medium transition-colors cursor-pointer",
+                  filter === tab
+                    ? "bg-secondary text-secondary-foreground shadow-sm font-semibold"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                {tab === 'all' && 'Все (50)'}
+                {tab === 'sakhalin' && '📍 Сахалин'}
+                {tab === 'remote' && '🌐 Удалёнка'}
+                {tab === 'custom' && '⭐ Мои'}
+                {tab === 'sent' && '☑️ Отправлено'}
+                {tab === 'error' && '⚠️ Ошибки'}
+              </button>
+            ))}
+
+            <button
+              onClick={exportCSV}
+              className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-sm hover:bg-accent hover:text-accent-foreground gap-1.5 ml-auto cursor-pointer"
+            >
+              <Download className="h-3.5 w-3.5" /> Экспорт
+            </button>
+          </div>
+        </div>
+
+        {/* Таблица shadcn Table */}
+        <div className="rounded-md border bg-card shadow-sm overflow-hidden">
+          <div className="relative w-full overflow-auto max-h-[70vh]">
+            <table className="w-full caption-bottom text-sm border-collapse">
+              <thead className="[&_tr]:border-b sticky top-0 z-20 bg-muted/90 backdrop-blur supports-[backdrop-filter]:bg-muted/70">
+                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <th className="h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs w-10">№</th>
+                  <th className="h-10 px-3 text-center align-middle font-medium text-muted-foreground text-xs w-20">Статус</th>
+                  <th className="h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs w-44">Ответ</th>
+                  <th className="h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs w-52">Способ / Заметка</th>
+                  <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground text-xs">Компания</th>
+                  <th className="h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs">Регион</th>
+                  <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground text-xs">Email / Контакты</th>
+                  <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground text-xs">Направление</th>
+                </tr>
+              </thead>
+              <tbody className="[&_tr:last-child]:border-0 divide-y divide-border/60">
+                {filtered.map(item => {
+                  const s = states[item.id] || { sent: false, status: 'none', channel: 'email', note: '' };
+
+                  let rowStyle = 'hover:bg-muted/40 transition-colors';
+                  if (s.status === 'yes') rowStyle = 'bg-emerald-950/25 hover:bg-emerald-950/35 border-l-2 border-l-emerald-500';
+                  else if (s.status === 'no') rowStyle = 'bg-rose-950/25 hover:bg-rose-950/35 border-l-2 border-l-rose-500';
+                  else if (s.status === 'noemail') rowStyle = 'bg-amber-950/25 hover:bg-amber-950/35 border-l-2 border-l-amber-500';
+                  else if (s.sent) rowStyle = 'bg-blue-950/15 hover:bg-blue-950/25';
+
+                  return (
+                    <tr key={item.id} className={rowStyle}>
+                      <td className="p-3 align-middle font-mono text-xs text-muted-foreground">{item.id}</td>
+                      <td className="p-3 align-middle text-center">
+                        <input
+                          type="checkbox"
+                          checked={s.sent}
+                          onChange={(e) => toggleSent(item.id, e.target.checked)}
+                          className="h-4 w-4 rounded border-primary text-primary focus:ring-1 focus:ring-ring cursor-pointer bg-background"
+                        />
+                      </td>
+                      <td className="p-3 align-middle">
+                        <select
+                          value={s.status}
+                          onChange={(e) => updateStatus(item.id, e.target.value as any)}
+                          className={cn(
+                            "h-8 w-full rounded-md border px-2 py-1 text-xs font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer bg-background",
+                            s.status === 'yes' && "border-emerald-500 text-emerald-400 bg-emerald-950/40",
+                            s.status === 'no' && "border-rose-500 text-rose-400 bg-rose-950/40",
+                            s.status === 'noemail' && "border-amber-500 text-amber-400 bg-amber-950/40",
+                            s.status === 'none' && "border-input text-muted-foreground"
+                          )}
+                        >
+                          <option value="none">⏳ Ждем ответ</option>
+                          <option value="yes">✅ Да (Ответили)</option>
+                          <option value="no">❌ Нет (Отказ)</option>
+                          <option value="noemail">⚠️ Нет такой почты</option>
+                        </select>
+                      </td>
+                      <td className="p-3 align-middle space-y-1">
+                        <select
+                          value={s.channel}
+                          onChange={(e) => updateChannel(item.id, e.target.value as any)}
+                          className="h-7 w-full rounded-md border border-input bg-background px-2 py-0.5 text-xs text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+                        >
+                          <option value="email">📧 На Email</option>
+                          <option value="site">🌐 Через сайт</option>
+                          <option value="hh">💼 Через hh.ru</option>
+                          <option value="tg">✈️ В Telegram</option>
+                        </select>
+                        <input
+                          type="text"
+                          value={s.note}
+                          onChange={(e) => updateNote(item.id, e.target.value)}
+                          placeholder="Заметка..."
+                          className="h-7 w-full rounded-md border border-input bg-background px-2 py-0.5 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring placeholder:text-muted-foreground/60"
+                        />
+                      </td>
+                      <td className="p-4 align-middle font-medium text-foreground">
+                        {item.name}
+                      </td>
+                      <td className="p-3 align-middle">
+                        <span className={cn(
+                          "inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold transition-colors",
+                          item.isCustom
+                            ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                            : item.isSakhalin
+                            ? "border-blue-500/30 bg-blue-500/10 text-blue-400"
+                            : "border-purple-500/30 bg-purple-500/10 text-purple-400"
+                        )}>
+                          {item.region}
+                        </span>
+                      </td>
+                      <td className="p-4 align-middle">
+                        <code className="relative rounded bg-muted px-[0.4rem] py-[0.2rem] font-mono text-xs text-primary font-medium select-all border border-border/50">
+                          {item.email || '—'}
+                        </code>
+                      </td>
+                      <td className="p-4 align-middle text-xs text-muted-foreground">
+                        {item.role}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+
+      {/* Floating scroll to top */}
       {showTopBtn && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-6 right-6 p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-2xl transition-all cursor-pointer z-50"
-          title="Наверх"
+          className="fixed bottom-6 right-6 inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 cursor-pointer z-50"
         >
-          <ArrowUp size={20} />
+          <ArrowUp className="h-5 w-5" />
         </button>
       )}
 
-      {/* Модальное окно добавления */}
+      {/* Модальное окно shadcn Dialog */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <Plus size={18} className="text-indigo-400" /> Добавить компанию
-            </h2>
-            <div className="space-y-3.5">
-              <div>
-                <label className="block text-xs uppercase tracking-wider text-slate-400 mb-1">Название компании *</label>
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-lg border bg-card p-6 shadow-lg text-card-foreground">
+            <div className="flex flex-col space-y-1.5 text-left mb-4">
+              <h2 className="text-lg font-semibold leading-none tracking-tight">Добавить компанию</h2>
+              <p className="text-xs text-muted-foreground">Внесите компанию в свой трекер для отслеживания отклика</p>
+            </div>
+
+            <div className="grid gap-3 py-2">
+              <div className="grid gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Название компании *</label>
                 <input
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Например: Яндекс, Местный банк..."
-                  className="w-full bg-slate-900 border border-slate-700 text-white px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
+                  placeholder="Яндекс, Банк, Провайдер..."
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
               </div>
-              <div>
-                <label className="block text-xs uppercase tracking-wider text-slate-400 mb-1">Регион</label>
+
+              <div className="grid gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Регион</label>
                 <select
                   value={newRegion}
                   onChange={(e) => setNewRegion(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 text-white px-3 py-2 rounded-lg text-sm focus:outline-none"
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
                   <option value="Сахалин">Мой регион (Сахалин)</option>
                   <option value="Удалённо">Удалённо / Другой регион</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-xs uppercase tracking-wider text-slate-400 mb-1">Способ отклика</label>
+
+              <div className="grid gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Способ отклика</label>
                 <select
                   value={newChannel}
                   onChange={(e) => setNewChannel(e.target.value as any)}
-                  className="w-full bg-slate-900 border border-slate-700 text-white px-3 py-2 rounded-lg text-sm focus:outline-none"
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
                   <option value="email">📧 Напрямую на Email</option>
-                  <option value="site">🌐 Через сайт / анкету</option>
+                  <option value="site">🌐 Через сайт компании</option>
                   <option value="hh">💼 Через HeadHunter (hh.ru)</option>
                   <option value="tg">✈️ В Telegram</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-xs uppercase tracking-wider text-slate-400 mb-1">Контакты (Email или ссылка)</label>
+
+              <div className="grid gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Контакты (Email или ссылка)</label>
                 <input
                   type="text"
                   value={newContact}
                   onChange={(e) => setNewContact(e.target.value)}
                   placeholder="hr@company.ru или ссылка на вакансию"
-                  className="w-full bg-slate-900 border border-slate-700 text-white px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
               </div>
-              <div>
-                <label className="block text-xs uppercase tracking-wider text-slate-400 mb-1">Заметка</label>
+
+              <div className="grid gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Заметка</label>
                 <input
                   type="text"
                   value={newNote}
                   onChange={(e) => setNewNote(e.target.value)}
                   placeholder="Отправил через форму / жду ответ"
-                  className="w-full bg-slate-900 border border-slate-700 text-white px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-2.5 mt-6">
+
+            <div className="flex justify-end gap-2 mt-6">
               <button
                 onClick={() => setModalOpen(false)}
-                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold rounded-lg cursor-pointer"
+                className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-xs font-medium shadow-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
               >
                 Отмена
               </button>
               <button
                 onClick={handleAddCompany}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg cursor-pointer shadow-lg shadow-indigo-600/30"
+                className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-4 py-2 text-xs font-medium shadow hover:bg-primary/90 cursor-pointer"
               >
-                Сохранить
+                Сохранить компанию
               </button>
             </div>
           </div>
